@@ -62,12 +62,12 @@ def plot_pca2(df):
     plot_df(df, mat, 'pca2.png')
 
 
-def plot_pca10_tsne(df):
-    pca = PCA(n_components=2)
+def plot_pca20_tsne(df):
+    pca = PCA(n_components=20)
     mat = pca.fit_transform(df.as_matrix())
     tsne = TSNE(n_components=2, random_state=1)
     mat2 = tsne.fit_transform(mat)
-    plot_df(df, mat2, 'pca10_tsne.png')
+    plot_df(df, mat2, 'pca20_tsne.png')
 
 
 def plot_tsne(df):
@@ -106,6 +106,28 @@ def auen(df):
     plot_tsne(pd.DataFrame(latent, index=df.index))
 
 
+def classify(df):
+    x_train = df.as_matrix()
+    y_train = np.array([0 if x.endswith('0') else 1 for x in df.index.tolist()])
+    input_dim = x_train.shape[1]
+
+    activation = 'sigmoid'
+    model = Sequential()
+    model.add(Dense(1000, input_dim=input_dim, activation=activation))
+    model.add(Dropout(0.2))
+    model.add(Dense(20, activation=activation))
+    model.add(Dense(1, activation='sigmoid'))
+
+    model.summary()
+
+    model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
+
+    model.fit(x_train, y_train,
+              batch_size=100,
+              epochs=2,
+              validation_split=0.2)
+
+
 def main():
     # transform()
     df = pd.read_csv('transformed.csv', engine='c')
@@ -117,11 +139,12 @@ def main():
     mat = scaler.fit_transform(mat)
     df = pd.DataFrame(mat, index=df.index, columns=df.columns)
 
-    auen(df)
+    # auen(df)
 
-    plot_pca2(df)
-    plot_pca10_tsne(df)
+    # plot_pca2(df)
+    # plot_pca20_tsne(df)
 
+    classify(df)
 
 
 

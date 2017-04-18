@@ -74,10 +74,10 @@ def plot_pca20_tsne(df):
     plot_df(df, mat2, 'pca20_tsne.png')
 
 
-def plot_tsne(df):
+def plot_tsne(df, png):
     tsne = TSNE(n_components=2, random_state=1)
     mat = tsne.fit_transform(df.as_matrix())
-    plot_df(df, mat, 'tsne.png')
+    plot_df(df, mat, png)
 
 
 def auen(df):
@@ -107,7 +107,7 @@ def auen(df):
            validation_split=0.1)
 
     latent = encoder.predict(x_train)
-    plot_tsne(pd.DataFrame(latent, index=df.index))
+    plot_tsne(pd.DataFrame(latent, index=df.index), 'tsne.png')
 
 
 def denoising_auen(df):
@@ -117,13 +117,13 @@ def denoising_auen(df):
     x_train = x_all[:-val_pos]
 
     x_train_noisy = None
-    x_train_extended = None
+    x_train_target = None
 
     noise_factor = 0.1
     for _ in range(10):
         noisy = x_train + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=x_train.shape)
         x_train_noisy = np.concatenate((x_train_noisy, noisy)) if x_train_noisy else noisy
-        x_train_extended = np.concatenate((x_train_extended, x_train)) if x_train_extended else noisy
+        x_train_target = np.concatenate((x_train_target, x_train)) if x_train_target else x_train
 
     print(x_train_noisy.shape)
 
@@ -146,13 +146,16 @@ def denoising_auen(df):
 
     ae.compile(optimizer='rmsprop', loss='mse')
 
-    ae.fit(x_train_noisy, x_train,
+    checkpointer = ModelCheckpoint(filepath="dae_weights.hdf5", verbose=1, save_best_only=True)
+
+    ae.fit(x_train_noisy, x_train_target,
            batch_size=100,
            epochs=100,
-           validation_split=0.1)
+           callbacks=[checkpointer],
+           validation_data=(x_val, x_val))
 
     latent = encoder.predict(x_train)
-    plot_tsne(pd.DataFrame(latent, index=df.index))
+    plot_tsne(pd.DataFrame(latent, index=df.index), 'dae_tsne.png')
 
 
 def classify_xgboost(df):

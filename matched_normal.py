@@ -146,11 +146,11 @@ def denoising_auen(df):
 
     ae.compile(optimizer='rmsprop', loss='mse')
 
-    checkpointer = ModelCheckpoint(filepath="dae_weights.hdf5", verbose=1, save_best_only=True)
+    checkpointer = ModelCheckpoint(filepath="dae_weights.hdf5", save_best_only=True)
 
     ae.fit(x_train_noisy, x_train_target,
            batch_size=100,
-           epochs=100,
+           epochs=50,
            callbacks=[checkpointer],
            validation_data=(x_val, x_val))
 

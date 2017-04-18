@@ -122,8 +122,8 @@ def denoising_auen(df):
     noise_factor = 0.1
     for _ in range(10):
         noisy = x_train + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=x_train.shape)
-        x_train_noisy = np.concatenate((x_train_noisy, noisy)) if x_train_noisy else noisy
-        x_train_target = np.concatenate((x_train_target, x_train)) if x_train_target else x_train
+        x_train_noisy = np.concatenate((x_train_noisy, noisy)) if x_train_noisy is not None else noisy
+        x_train_target = np.concatenate((x_train_target, x_train)) if x_train_target is not None else x_train
 
     print(x_train_noisy.shape)
 

@@ -16,8 +16,8 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import Imputer
 from sklearn.preprocessing import StandardScaler, MaxAbsScaler
 from sklearn.model_selection import cross_val_score
-
 from sklearn.manifold import TSNE
+from sklearn.ensemble import RandomForestClassifier
 
 from xgboost import XGBClassifier
 
@@ -158,6 +158,15 @@ def denoising_auen(df):
     plot_tsne(pd.DataFrame(latent, index=df.index), 'dae_tsne.png')
 
 
+def sprint_features(top_features, num_features=100):
+    str = ''
+    for i, feature in enumerate(top_features):
+        if i >= num_features:
+            break
+        str += '{}\t{:.5f}\n'.format(feature[1], feature[0])
+    return str
+
+
 def classify_xgboost(df):
     x_train = df.as_matrix()
     y_train = np.array([0 if x.endswith('0') else 1 for x in df.index.tolist()])
@@ -165,6 +174,20 @@ def classify_xgboost(df):
     scores = cross_val_score(clf, x_train, y_train, cv=5)
     print(scores)
     print(np.mean(scores))
+
+
+def classify_rf(df):
+    x_train = df.as_matrix()
+    y_train = np.array([0 if x.endswith('0') else 1 for x in df.index.tolist()])
+    clf = RandomForestClassifier()
+    scores = cross_val_score(clf, x_train, y_train, cv=2)
+    print(scores)
+    print(np.mean(scores))
+    fi = clf.feature_importances_
+    features = [(f, n) for f, n in zip(fi, df.index.tolist())]
+    top = sorted(features, key=lambda f:f[0], reverse=True)[:10]
+    with open("RF.top_features", "w") as fea_file:
+        fea_file.write(sprint_features(top))
 
 
 def classify(df):
@@ -203,13 +226,14 @@ def main():
     df = pd.DataFrame(mat, index=df.index, columns=df.columns)
 
     # auen(df)
-    denoising_auen(df)
+    # denoising_auen(df)
 
     # plot_pca2(df)
     # plot_pca20_tsne(df)
 
     # classify_xgboost(df)
-    classify(df)
+    classify_rf(df)
+    # classify(df)
 
 
 

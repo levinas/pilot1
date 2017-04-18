@@ -12,10 +12,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from sklearn.decomposition import PCA
 from sklearn.preprocessing import Imputer
 from sklearn.preprocessing import StandardScaler, MaxAbsScaler
-from sklearn.decomposition import PCA
+from sklearn.model_selection import cross_val_score
+
 from sklearn.manifold import TSNE
+
+from xgboost import XGBClassifier
 
 from keras.models import Model, Sequential
 from keras.layers import Dense, Dropout, Input
@@ -106,6 +110,15 @@ def auen(df):
     plot_tsne(pd.DataFrame(latent, index=df.index))
 
 
+def classify_xgboost(df):
+    x_train = df.as_matrix()
+    y_train = np.array([0 if x.endswith('0') else 1 for x in df.index.tolist()])
+    clf = XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.05)
+    scores = cross_val_score(clf, x_train, y_train, cv=5)
+    print(scores)
+    print(np.mean(scores))
+
+
 def classify(df):
     x_train = df.as_matrix()
     y_train = np.array([0 if x.endswith('0') else 1 for x in df.index.tolist()])
@@ -144,6 +157,7 @@ def main():
     # plot_pca2(df)
     # plot_pca20_tsne(df)
 
+    classify_xgboost(df)
     classify(df)
 
 

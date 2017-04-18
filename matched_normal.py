@@ -27,8 +27,8 @@ from keras.callbacks import Callback, ModelCheckpoint
 
 
 
-N1 = 2000
-NE = 600
+N1 = 1000
+NE = 100
 
 
 def transform():
@@ -56,7 +56,7 @@ def plot_df(df, mat, png):
     df2 = pd.DataFrame(mat, index=df.index, columns=['d1', 'd2'])
     df2 = df2.reset_index()
     df2['type'] = df2.apply(lambda r: 'Normal' if r['Sample'].endswith('0') else 'Tumor', axis=1)
-    g = sns.lmplot('d1', 'd2', df2, hue='type', fit_reg=False, size=8, scatter_kws={'alpha': 0.7, 's': 60})
+    g = sns.lmplot('d1', 'd2', df2, hue='type', fit_reg=False, size=8, scatter_kws={'alpha': 0.7, 's': 50})
     g.savefig(png)
 
 
@@ -103,8 +103,53 @@ def auen(df):
 
     ae.fit(x_train, x_train,
            batch_size=100,
-           epochs=2,
-           validation_split=0.2)
+           epochs=100,
+           validation_split=0.1)
+
+    latent = encoder.predict(x_train)
+    plot_tsne(pd.DataFrame(latent, index=df.index))
+
+
+def denoising_auen(df):
+    x_all = df.sample(frac=1.0).as_matrix()
+    val_pos = int(x_all.shape[0] * 0.1)
+    x_val = x_all[-val_pos:]
+    x_train = x_all[:-val_pos]
+
+    x_train_noisy = None
+    x_train_extended = None
+
+    noise_factor = 0.1
+    for _ in range(10):
+        noisy = x_train + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=x_train.shape)
+        x_train_noisy = np.concatenate((x_train_noisy, noisy)) if x_train_noisy else noisy
+        x_train_extended = np.concatenate((x_train_extended, x_train)) if x_train_extended else noisy
+
+    print(x_train_noisy.shape)
+
+    input_dim = x_train_noisy.shape[1]
+
+    input_vector = Input(shape=(input_dim,))
+    h = Dense(N1, activation='sigmoid')(input_vector)
+    h = Dense(NE, activation='sigmoid')(h)
+    encoded = h
+
+    h = Dense(N1, activation='sigmoid')(h)
+    h = Dense(input_dim, activation='sigmoid')(h)
+
+    ae = Model(input_vector, h)
+    ae.summary()
+
+    encoded_input = Input(shape=(NE,))
+    decoder = Model(encoded_input, ae.layers[-1](ae.layers[-2](encoded_input)))
+    encoder = Model(input_vector, encoded)
+
+    ae.compile(optimizer='rmsprop', loss='mse')
+
+    ae.fit(x_train_noisy, x_train,
+           batch_size=100,
+           epochs=100,
+           validation_split=0.1)
 
     latent = encoder.predict(x_train)
     plot_tsne(pd.DataFrame(latent, index=df.index))
@@ -124,11 +169,11 @@ def classify(df):
     y_train = np.array([0 if x.endswith('0') else 1 for x in df.index.tolist()])
     input_dim = x_train.shape[1]
 
-    activation = 'sigmoid'
+    activation = 'relu'
     model = Sequential()
-    model.add(Dense(1000, input_dim=input_dim, activation=activation))
-    model.add(Dropout(0.2))
-    model.add(Dense(20, activation=activation))
+    model.add(Dense(20, input_dim=input_dim, activation=activation))
+    # model.add(Dropout(0.2))
+    # model.add(Dense(20, activation=activation))
     model.add(Dense(1, activation='sigmoid'))
 
     model.summary()
@@ -137,22 +182,24 @@ def classify(df):
 
     model.fit(x_train, y_train,
               batch_size=100,
-              epochs=2,
+              epochs=10,
               validation_split=0.2)
 
 
 def main():
     # transform()
-    df = pd.read_csv('transformed.csv', engine='c')
+    # df = pd.read_csv('transformed.csv', engine='c')
+    # df.to_hdf('transformed.h5', 'df')
+    df = pd.read_hdf('transformed.h5')
     df = df.set_index('Sample')
 
-    # scaler = StandardScaler()
-    scaler = MaxAbsScaler()
+    scaler = StandardScaler()
+    # scaler = MaxAbsScaler()
     mat = df.as_matrix().astype(np.float32)
     mat = scaler.fit_transform(mat)
     df = pd.DataFrame(mat, index=df.index, columns=df.columns)
 
-    # auen(df)
+    auen(df)
 
     # plot_pca2(df)
     # plot_pca20_tsne(df)

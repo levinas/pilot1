@@ -18,7 +18,7 @@ from sklearn.preprocessing import StandardScaler, MaxAbsScaler
 from sklearn.model_selection import cross_val_score
 from sklearn.manifold import TSNE
 from sklearn.ensemble import RandomForestClassifier
-
+from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier
 
 from keras.models import Model, Sequential
@@ -150,12 +150,23 @@ def denoising_auen(df):
 
     ae.fit(x_train_noisy, x_train_target,
            batch_size=100,
-           epochs=50,
+           epochs=40,
            callbacks=[checkpointer],
            validation_data=(x_val, x_val))
 
-    latent = encoder.predict(x_train)
-    plot_tsne(pd.DataFrame(latent, index=df.index), 'dae_tsne.png')
+    latent = encoder.predict(x_all)
+    df_latent = pd.DataFrame(latent, index=df.index)
+    df_latent.to_csv('dae_latent.csv')
+    plot_tsne(df_latent, 'dae_tsne.png')
+
+    y_all = np.array([0 if x.endswith('0') else 1 for x in df.index.tolist()])
+
+    for i, column in enumerate(latent.T):
+        clf = LogisticRegression()
+        x1 = column.reshape(-1, 1)
+        clf.fit(x1, y_all)
+        score = clf.score(x1, y_all)
+        print(i, score)
 
 
 def sprint_features(top_features, num_features=100):
@@ -179,16 +190,23 @@ def classify_xgboost(df):
 def classify_rf(df):
     x_train = df.as_matrix()
     y_train = np.array([0 if x.endswith('0') else 1 for x in df.index.tolist()])
-    clf = RandomForestClassifier()
-    scores = cross_val_score(clf, x_train, y_train, cv=2)
+    clf = RandomForestClassifier(n_estimators=10)
+    scores = cross_val_score(clf, x_train, y_train, cv=3)
     print(scores)
     print(np.mean(scores))
     clf.fit(x_train, y_train)
     fi = clf.feature_importances_
     features = [(f, n) for f, n in zip(fi, df.columns.tolist())]
-    top = sorted(features, key=lambda f:f[0], reverse=True)[:10]
+    top = sorted(features, key=lambda f:f[0], reverse=True)[:1]
     with open("RF.top_features", "w") as fea_file:
         fea_file.write(sprint_features(top))
+    print(top)
+
+    x_train_top = df[[x[1] for x in top]].as_matrix()
+    clf2 = RandomForestClassifier()
+    scores2 = cross_val_score(clf2, x_train_top, y_train, cv=3)
+    print(scores2)
+    print(np.mean(scores2))
 
 
 def classify(df):
@@ -227,13 +245,13 @@ def main():
     df = pd.DataFrame(mat, index=df.index, columns=df.columns)
 
     # auen(df)
-    # denoising_auen(df)
+    denoising_auen(df)
 
     # plot_pca2(df)
     # plot_pca20_tsne(df)
 
     # classify_xgboost(df)
-    classify_rf(df)
+    # classify_rf(df)
     # classify(df)
 
 

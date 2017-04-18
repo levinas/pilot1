@@ -183,8 +183,9 @@ def classify_rf(df):
     scores = cross_val_score(clf, x_train, y_train, cv=2)
     print(scores)
     print(np.mean(scores))
+    clf.fit(x_train, y_train)
     fi = clf.feature_importances_
-    features = [(f, n) for f, n in zip(fi, df.index.tolist())]
+    features = [(f, n) for f, n in zip(fi, df.columns.tolist())]
     top = sorted(features, key=lambda f:f[0], reverse=True)[:10]
     with open("RF.top_features", "w") as fea_file:
         fea_file.write(sprint_features(top))

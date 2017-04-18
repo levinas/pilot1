@@ -202,7 +202,8 @@ def main():
     mat = scaler.fit_transform(mat)
     df = pd.DataFrame(mat, index=df.index, columns=df.columns)
 
-    auen(df)
+    # auen(df)
+    denoising_auen(df)
 
     # plot_pca2(df)
     # plot_pca20_tsne(df)

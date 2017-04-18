@@ -157,7 +157,7 @@ def main():
     # plot_pca2(df)
     # plot_pca20_tsne(df)
 
-    classify_xgboost(df)
+    # classify_xgboost(df)
     classify(df)
 
 
